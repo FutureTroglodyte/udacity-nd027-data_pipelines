@@ -69,13 +69,15 @@ class StageToRedshiftOperator(BaseOperator):
                 FROM '{s3_path}'
                 ACCESS_KEY_ID '{credentials.access_key}'
                 SECRET_ACCESS_KEY '{credentials.secret_key}'
-                IGNOREHEADER {self.ignore_headers}
-                DELIMITER '{self.delimiter}'
+                -- IGNOREHEADER {self.ignore_headers}
+                -- DELIMITER '{self.delimiter}'
+                JSON 'auto'
                 COMPUPDATE off
                 REGION 'us-west-2'
                 EMPTYASNULL
                 BLANKSASNULL
                 TRUNCATECOLUMNS
             """
+        self.log.info(copy_sql)
         redshift.run(copy_sql)
         self.log.info("Done!")
