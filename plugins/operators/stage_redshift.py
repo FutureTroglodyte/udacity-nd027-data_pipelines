@@ -6,7 +6,9 @@ from airflow.utils.decorators import apply_defaults
 
 class StageToRedshiftOperator(BaseOperator):
     """
-    Taken from the S3ToRedshiftOperator in Lesson 3 - Exercise 1
+    Copying a data as it is from S3 to redshift.
+
+    Code is basically taken from Lesson 3 - Exercise 1
     """
 
     ui_color = "#358140"
@@ -20,6 +22,7 @@ class StageToRedshiftOperator(BaseOperator):
         table="",
         s3_bucket="",
         s3_key="",
+        jsonpath="",
         delimiter=",",
         ignore_headers=1,
         *args,
@@ -30,6 +33,7 @@ class StageToRedshiftOperator(BaseOperator):
         self.redshift_conn_id = redshift_conn_id
         self.s3_bucket = s3_bucket
         self.s3_key = s3_key
+        self.jsonpath = jsonpath
         self.delimiter = delimiter
         self.ignore_headers = ignore_headers
         self.aws_credentials_id = aws_credentials_id
@@ -45,12 +49,33 @@ class StageToRedshiftOperator(BaseOperator):
         self.log.info("Copying data from S3 to Redshift")
         rendered_key = self.s3_key.format(**context)
         s3_path = "s3://{}/{}".format(self.s3_bucket, rendered_key)
-        copy_sql = f"""
-            COPY {self.table}
-            FROM '{s3_path}'
-            ACCESS_KEY_ID '{credentials.access_key}'
-            SECRET_ACCESS_KEY '{credentials.secret_key}'
-            IGNOREHEADER {self.ignore_headers}
-            DELIMITER '{self.delimiter}'
-        """
+        if self.jsonpath != "":
+            copy_sql = f"""
+                COPY {self.table}
+                FROM '{s3_path}'
+                ACCESS_KEY_ID '{credentials.access_key}'
+                SECRET_ACCESS_KEY '{credentials.secret_key}'
+                IGNOREHEADER {self.ignore_headers}
+                JSON '{self.jsonpath}'
+                COMPUPDATE off
+                REGION 'us-west-2'
+                EMPTYASNULL
+                BLANKSASNULL
+                TRUNCATECOLUMNS
+            """
+        else:
+            copy_sql = f"""
+                COPY {self.table}
+                FROM '{s3_path}'
+                ACCESS_KEY_ID '{credentials.access_key}'
+                SECRET_ACCESS_KEY '{credentials.secret_key}'
+                IGNOREHEADER {self.ignore_headers}
+                DELIMITER '{self.delimiter}'
+                COMPUPDATE off
+                REGION 'us-west-2'
+                EMPTYASNULL
+                BLANKSASNULL
+                TRUNCATECOLUMNS
+            """
         redshift.run(copy_sql)
+        self.log.info("Done!")
