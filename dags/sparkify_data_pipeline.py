@@ -28,36 +28,87 @@ dag = DAG(
 
 start_operator = DummyOperator(task_id="Begin_execution", dag=dag)
 
-stage_events_to_redshift = StageToRedshiftOperator(task_id="Stage_events", dag=dag)
+stage_events_to_redshift = StageToRedshiftOperator(
+    task_id="Stage_events",
+    dag=dag,
+    redshift_conn_id="redshift",
+    aws_credentials_id="aws_credentials",
+    table="staging_events",
+    s3_bucket="udacity-dend",
+    s3_key="log-data",
+    jsonpath="s3://udacity-dend/log_json_path.json",
+    delimiter=",",
+    ignore_headers=1,
+)
 
-stage_songs_to_redshift = StageToRedshiftOperator(task_id="Stage_songs", dag=dag)
+stage_songs_to_redshift = StageToRedshiftOperator(
+    task_id="Stage_songs",
+    dag=dag,
+    redshift_conn_id="redshift",
+    aws_credentials_id="aws_credentials",
+    table="staging_songs",
+    s3_bucket="udacity-dend",
+    s3_key="song_data/A/A",
+    jsonpath="",
+    delimiter=",",
+    ignore_headers=1,
+)
 
-load_songplays_table = LoadFactOperator(task_id="Load_songplays_fact_table", dag=dag)
+load_songplays_table = LoadFactOperator(
+    task_id="Load_songplays_fact_table",
+    dag=dag,
+    redshift_conn_id="redshift",
+    table="songplays",
+    select_statement=SqlQueries.songplay_table_insert,
+)
 
 load_user_dimension_table = LoadDimensionOperator(
-    task_id="Load_user_dim_table", dag=dag
+    task_id="Load_user_dim_table",
+    dag=dag,
+    redshift_conn_id="redshift",
+    table="users",
+    select_statement=SqlQueries.user_table_insert,
 )
 
 load_song_dimension_table = LoadDimensionOperator(
-    task_id="Load_song_dim_table", dag=dag
+    task_id="Load_song_dim_table",
+    dag=dag,
+    redshift_conn_id="redshift",
+    table="songs",
+    select_statement=SqlQueries.song_table_insert,
 )
 
 load_artist_dimension_table = LoadDimensionOperator(
-    task_id="Load_artist_dim_table", dag=dag
+    task_id="Load_artist_dim_table",
+    dag=dag,
+    redshift_conn_id="redshift",
+    table="artists",
+    select_statement=SqlQueries.artist_table_insert,
 )
 
 load_time_dimension_table = LoadDimensionOperator(
-    task_id="Load_time_dim_table", dag=dag
+    task_id="Load_time_dim_table",
+    dag=dag,
+    redshift_conn_id="redshift",
+    table="time",
+    select_statement=SqlQueries.time_table_insert,
 )
 
-run_quality_checks = DataQualityOperator(task_id="Run_data_quality_checks", dag=dag)
+run_quality_checks = DataQualityOperator(
+    task_id="Run_data_quality_checks",
+    dag=dag,
+    redshift_conn_id="redshift",
+    tables_list=["songplays", "users", "songs", "artists", "time"],
+)
 
 end_operator = DummyOperator(task_id="Stop_execution", dag=dag)
 
-start_operator >> [stage_events_to_redshift, stage_songs_to_redshift] >> load_songplays_table
-load_songplays_table >> [
+
+# Set Task Dependencies
+
+start_operator >> [stage_events_to_redshift, stage_songs_to_redshift] >> [
     load_user_dimension_table,
     load_song_dimension_table,
     load_artist_dimension_table,
-    load_time_dimension_table
+    load_time_dimension_table,
 ] >> run_quality_checks >> end_operator
