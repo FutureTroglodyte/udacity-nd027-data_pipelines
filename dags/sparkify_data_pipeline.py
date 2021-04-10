@@ -27,7 +27,7 @@ dag = DAG(
     "sparkify_data_pipeline",
     default_args=default_args,
     description="Load and transform data in Redshift with Airflow",
-    schedule_interval='0 * * * *',
+    schedule_interval="0 * * * *",
     # schedule_interval="@once",
 )
 
@@ -65,6 +65,7 @@ load_songplays_table = LoadFactOperator(
     redshift_conn_id="redshift",
     table="songplays",
     select_statement=SqlQueries.songplay_table_insert,
+    if_exists="replace",
 )
 
 load_user_dimension_table = LoadDimensionOperator(
@@ -73,6 +74,7 @@ load_user_dimension_table = LoadDimensionOperator(
     redshift_conn_id="redshift",
     table="users",
     select_statement=SqlQueries.user_table_insert,
+    if_exists="replace",
 )
 
 load_song_dimension_table = LoadDimensionOperator(
@@ -81,6 +83,7 @@ load_song_dimension_table = LoadDimensionOperator(
     redshift_conn_id="redshift",
     table="songs",
     select_statement=SqlQueries.song_table_insert,
+    if_exists="replace",
 )
 
 load_artist_dimension_table = LoadDimensionOperator(
@@ -89,6 +92,7 @@ load_artist_dimension_table = LoadDimensionOperator(
     redshift_conn_id="redshift",
     table="artists",
     select_statement=SqlQueries.artist_table_insert,
+    if_exists="replace",
 )
 
 load_time_dimension_table = LoadDimensionOperator(
@@ -97,6 +101,7 @@ load_time_dimension_table = LoadDimensionOperator(
     redshift_conn_id="redshift",
     table="time",
     select_statement=SqlQueries.time_table_insert,
+    if_exists="replace",
 )
 
 run_quality_checks = DataQualityOperator(
