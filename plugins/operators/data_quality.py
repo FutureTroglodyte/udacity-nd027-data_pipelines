@@ -21,12 +21,14 @@ class DataQualityOperator(BaseOperator):
         self,
         redshift_conn_id="",
         tables_list=[],
+        checks_list=[],
         *args,
         **kwargs,
     ):
         super(DataQualityOperator, self).__init__(*args, **kwargs)
         self.redshift_conn_id = redshift_conn_id
         self.tables_list = tables_list
+        self.checks_list = checks_list
 
     def execute(self, context):
         redshift = PostgresHook(postgres_conn_id=self.redshift_conn_id)
@@ -35,23 +37,26 @@ class DataQualityOperator(BaseOperator):
         for table in self.tables_list:
             df = redshift.get_pandas_df(sql=f"select * from {table}")
             self.log.info(f"Checking {table}")
-            # Emptyness
-            self.log.info(f"Table {table} is empty: " + str(df.empty))
-            self.log.info(f"Table {table}'s number of rows: " + str(df.shape[0]))
-            # Duplicate entries
-            self.log.info(
-                f"Table {table} has duplicate rows: " + str(df.duplicated().any())
-            )
-            self.log.info(
-                f"Table {table}'s number of duplicate rows: "
-                + str(df.duplicated().sum())
-            )
-            # Missing Values
-            self.log.info(
-                f"Table {table} has missing values: " + str(df.isnull().sum().sum() > 0)
-            )
-            self.log.info(
-                f"Table {table}'s number of missing values: "
-                + str(df.isnull().sum().sum())
-            )
+            if "emptyness" in self.checks_list:
+                self.log.info(f"Table {table} is empty: " + str(df.empty))
+                self.log.info(f"Table {table}'s number of rows: " + str(df.shape[0]))
+                if df.empty:
+                    raise ValueError(f"Table {table} is empty")
+            if "duplicates" in self.checks_list:
+                self.log.info(
+                    f"Table {table} has duplicate rows: " + str(df.duplicated().any())
+                )
+                self.log.info(
+                    f"Table {table}'s number of duplicate rows: "
+                    + str(df.duplicated().sum())
+                )
+            if "missing_values" in self.checks_list:
+                self.log.info(
+                    f"Table {table} has missing values: "
+                    + str(df.isnull().sum().sum() > 0)
+                )
+                self.log.info(
+                    f"Table {table}'s number of missing values: "
+                    + str(df.isnull().sum().sum())
+                )
         self.log.info(f"Checking Data Quality Done!")
