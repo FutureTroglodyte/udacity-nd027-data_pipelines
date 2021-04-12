@@ -70,13 +70,14 @@ Trigger the DAG `sparkify_data_pipeline` import the raw sets from Udacity's S3 a
 
 ## Data Quality Checks
 
-Three optional checks are applied to optionally zero to all five tables of the star schema:
+Five checks are applied to optionally tables of the star schema:
+- Checking if songplay_id is unique in songplays
+- Checking if user_id is unique in users
+- Checking if song_id is unique in songs
+- Checking if artist_id is unique in artists
+- Checking if start_time is unique in time
 
-- Checking table emptyness
-- Cheking for duplicate rows
-- Checking for missing values
-
-In case the emptyness check fails, the task und consequently the DAG fails.
+As `ignore_fails=False` is set, the task und consequently the DAG would fail, if any of the checks fails.
 
 The output is given in the logs of the DAGs task `Run_data_quality_checks`:
 
