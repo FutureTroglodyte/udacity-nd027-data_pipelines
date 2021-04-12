@@ -5,13 +5,17 @@ from airflow.utils.decorators import apply_defaults
 
 class DataQualityOperator(BaseOperator):
     """
-    Applying some data quality checks to all tables in tables_list:
-    - Checking table emptyness
-    - Cheking for duplicate rows
-    - Checking for missing values
+    Applying some data quality checks given by a list of json strings
+    {
+        'check_sql': <a single-value sql statement>,
+        'expected_result':
+    }
 
-    got the get_pandas_df() hint from here:
-        https://stackoverflow.com/questions/61555430/how-to-do-store-sql-output-to-pandas-dataframe-using-airflow
+    If the single value mathces the expected result, the check is passed.
+    Otherwise it failed.
+
+    If ignore_fails == False in the latter case the Task and consequently the
+    DAG fails.
     """
 
     ui_color = "#89DA59"
@@ -20,43 +24,32 @@ class DataQualityOperator(BaseOperator):
     def __init__(
         self,
         redshift_conn_id="",
-        tables_list=[],
-        checks_list=[],
+        checks=[],
+        ignore_fails=True,
         *args,
         **kwargs,
     ):
         super(DataQualityOperator, self).__init__(*args, **kwargs)
         self.redshift_conn_id = redshift_conn_id
-        self.tables_list = tables_list
-        self.checks_list = checks_list
+        self.checks = checks
+        self.ignore_fails = ignore_fails
 
     def execute(self, context):
         redshift = PostgresHook(postgres_conn_id=self.redshift_conn_id)
 
         self.log.info("Checking Data Quality")
-        for table in self.tables_list:
-            df = redshift.get_pandas_df(sql=f"select * from {table}")
-            self.log.info(f"Checking {table}")
-            if "emptyness" in self.checks_list:
-                self.log.info(f"Table {table} is empty: " + str(df.empty))
-                self.log.info(f"Table {table}'s number of rows: " + str(df.shape[0]))
-                if df.empty:
-                    raise ValueError(f"Table {table} is empty")
-            if "duplicates" in self.checks_list:
-                self.log.info(
-                    f"Table {table} has duplicate rows: " + str(df.duplicated().any())
-                )
-                self.log.info(
-                    f"Table {table}'s number of duplicate rows: "
-                    + str(df.duplicated().sum())
-                )
-            if "missing_values" in self.checks_list:
-                self.log.info(
-                    f"Table {table} has missing values: "
-                    + str(df.isnull().sum().sum() > 0)
-                )
-                self.log.info(
-                    f"Table {table}'s number of missing values: "
-                    + str(df.isnull().sum().sum())
-                )
-        self.log.info(f"Checking Data Quality Done!")
+        for check in self.checks:
+            sql = check.get("check_sql")
+            exp_result = check.get("expected_result")
+            self.log.info(
+                "Checking: " + "(" + str(sql) + ")" + " is equal " + str(exp_result)
+            )
+
+            records = redshift.get_records(sql)[0]
+            if records[0] == exp_result:
+                self.log.info("Check passed")
+            elif not self.ignore_fails and records[0] != exp_result:
+                ValueError("Data Quality Check failed.")
+            else:
+                self.log.info("Check failed")
+        self.log.info("Checking Data Quality Done!")
