@@ -1,13 +1,13 @@
 class SqlQueries:
     songplay_table_insert = """
         SELECT
-            md5(events.sessionid || events.start_time) songplay_id,
+            md5(events.session_id || events.start_time) songplay_id,
             events.start_time,
-            events.userid,
+            events.user_id,
             events.level,
             songs.song_id,
             songs.artist_id,
-            events.sessionid,
+            events.session_id,
             events.location,
             events.useragent
         FROM(
@@ -25,7 +25,7 @@ class SqlQueries:
 
     user_table_insert = """
         SELECT DISTINCT
-            userid,
+            user_id,
             firstname,
             lastname,
             gender,
