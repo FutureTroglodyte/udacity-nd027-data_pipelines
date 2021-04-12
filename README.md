@@ -81,4 +81,4 @@ As `ignore_fails=False` is set, the task und consequently the DAG would fail, if
 
 The output is given in the logs of the DAGs task `Run_data_quality_checks`:
 
-![grafik](https://user-images.githubusercontent.com/75797587/114273078-01ccf000-9a19-11eb-8c78-ea9ec44de5ff.png)
+![grafik](https://user-images.githubusercontent.com/75797587/114469246-106c0080-9bed-11eb-9c3a-bd4873c04bf7.png)
